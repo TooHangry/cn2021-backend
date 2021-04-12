@@ -113,6 +113,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-#
+# Don't commit DB
 app.db
-.migrations/
+*.db
