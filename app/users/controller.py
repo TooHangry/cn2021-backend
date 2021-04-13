@@ -66,7 +66,6 @@ def update_current_user(current_user):
 
     user1 = User.query.filter(User.username == nickname).first()
     user2 = User.query.filter(User.email == email).first()
-    print(user1, user2)
 
     if user2 and user2.id != current_user.id:
         return 'That email is already taken!', 400
