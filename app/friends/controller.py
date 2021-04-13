@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 from datetime import datetime, timedelta
 from helpers.decorators import token_required
+from helpers.helpers import get_common_rooms, get_common_room
 from sqlalchemy import and_
 from app.rooms.models import Room
 
@@ -25,9 +26,13 @@ def get_initial_list(current_user):
     for friend in friends:
         friend_user_models.append(User.query.filter(User.id == friend.friend_id).first())
 
+    friends = []
+    for friend in friend_user_models:
+        friends.append({**friend.serialize_friend(), 'room': get_common_room(friend.rooms, current_user.rooms).serialize()})
+
     return {
         'users': [u.serialize_friend() for u in users],
-        'friends': [f.serialize_friend() for f in friend_user_models]
+        'friends': friends
     }
 
 @friend_routes.route('/add', methods=['POST'])
@@ -80,15 +85,16 @@ def remove_friend(current_user, id):
     Friend.query.filter(and_(Friend.friend_id==id, Friend.user_id==current_user.id)).delete()
     Friend.query.filter(and_(Friend.friend_id==current_user.id, Friend.user_id==id)).delete()
 
-    friend_user_rooms = list(map(lambda x: x.id, filter(lambda r: r.is_group == False, list(User.query.filter(User.id==id).first().rooms))))
-    user_rooms = list(map(lambda x: x.id, filter(lambda r: r.is_group == False, list(current_user.rooms))))
-    print(friend_user_rooms, user_rooms)
+    friend = User.query.filter(User.id==id).first()
 
-    for room in user_rooms:
-        if room in friend_user_rooms:
-            Room.query.filter(Room.id == room).delete()
-
+    # Deletes shared rooms from both users
+    rooms = get_common_rooms(friend.rooms, current_user.rooms)
+    for room in rooms:
+        current_user.rooms.remove(room)
+        friend.rooms.remove(room)
+        db.session.delete(room)
     db.session.commit()
+
     return {
         'friend': None
     }

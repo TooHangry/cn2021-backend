@@ -1,7 +1,8 @@
 from app import db
 from sqlalchemy.orm import relationship
 import os
-from app.rooms.models import users_rooms
+from app.rooms.models import users_to_rooms
+from helpers.helpers import get_common_room
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -16,7 +17,7 @@ class User(db.Model):
     # Expansion properties
     friends = relationship('Friend', back_populates='user', lazy='dynamic')
     chats = relationship('Chat', back_populates='user', lazy='dynamic')
-    rooms = relationship('Room', secondary=users_rooms, backref=db.backref('users'), lazy='dynamic')
+    rooms = relationship('Room', secondary=users_to_rooms, backref=db.backref('users', lazy='dynamic'))
 
     def serialize(self):
         name = str(self.first_name) + ' ' + str(self.last_name)
@@ -26,7 +27,7 @@ class User(db.Model):
             'username': self.username,
             'email': self.email,
             'profilePicture': self.profile_picture,
-            'friends': [f.serialize() for f in self.friends],
+            'friends': get_friends(self),
             'rooms': [r.serialize() for r in self.rooms]
         }
 
@@ -38,3 +39,14 @@ class User(db.Model):
             'name': name,
             'profilePicture': self.profile_picture,
         }
+
+def get_friends(user):
+    friend_user_models = []
+    for friend in user.friends:
+        friend_user_models.append(User.query.filter(User.id == friend.friend_id).first())
+
+    mapped_friends = []
+    for friend in friend_user_models:
+        mapped_friends.append({**friend.serialize_friend(), 'room': get_common_room(friend.rooms, user.rooms).serialize()})
+        
+    return mapped_friends
