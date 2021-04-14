@@ -31,7 +31,6 @@ def on_connect():
     messages = []
     if current_user:
         for friend in current_user.friends:
-            print(friend.friend_id)
 
             chats = Chat.query.filter(
                 or_(
@@ -48,7 +47,6 @@ def on_connect():
                 )
             ).order_by(Chat.date_created.asc()).all()[-10:]
             messages.extend(chats)
-            print(messages)
 
     if current_user:
         clients.append(current_user.id)
@@ -68,12 +66,40 @@ def on_message(data):
     receiver = User.query.filter_by(id=receiver_id).first()
 
     room = get_common_room(current_user.rooms, receiver.rooms)
-    message = create_message(current_user, data)
+    message = create_message(current_user, data, room.id)
 
     # Emits the message to both users
     # Should be able to emit to just a room, but there is a bug when first adding a friend
     emit('message', {'message': message.serialize()}, room='user' + str(receiver.id))
     emit('message', {'message': message.serialize()}, room='user' + str(current_user.id))
+
+@socketio.on('groupmessage')
+def on_message(data):
+    token = request.args.get('auth')
+    token_data = jwt.decode(token, app.config["SECRET_KEY"])
+    current_user = User.query.filter_by(id=token_data['id']).first()
+
+    room_id =int(data['room'])
+
+    room = Room.query.filter_by(id=room_id).first()
+
+    if room:
+        message = Chat(
+            group_id=room_id,
+            is_group=True,
+            is_image=False,
+            image_location='',
+            message=data['message'],
+            user_id=current_user.id,
+            receiver_id=current_user.id,
+            date_created=datetime.utcnow()
+        )
+
+        db.session.add(message)
+        db.session.commit()
+
+        for user in room.users:
+            emit('groupmessage', {'message': message.serialize()}, room='user' + str(user.id))
 
 @socketio.on('friend')
 def on_friend(data):

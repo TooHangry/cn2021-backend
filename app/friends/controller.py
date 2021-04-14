@@ -1,13 +1,13 @@
 from app import db
 from app import app as application
-from flask import Blueprint, request
+from flask import Blueprint, request, jsonify
 from app.users.models import User
 from app.friends.models import Friend
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 from datetime import datetime, timedelta
 from helpers.decorators import token_required
-from helpers.helpers import get_common_rooms, get_common_room
+from helpers.helpers import get_common_rooms, get_common_room, get_common_rooms_no_groups
 from sqlalchemy import and_
 from app.rooms.models import Room
 
@@ -77,6 +77,28 @@ def add_friend(current_user):
     return 'Cannot add friend', 400
    
 
+@friend_routes.route('/add/group', methods=['POST'])
+@token_required
+def add_group(current_user):
+    data = request.form
+    ids = request.form.getlist('ids[]')
+    name = request.form.get('name')
+
+    room = Room(
+        is_group=True,
+        name=name
+    )
+    for userID in ids:
+        uID = int(userID)
+        user = User.query.filter_by(id=uID).first()
+        user.rooms.append(room)
+
+    db.session.commit()
+    
+
+    return {
+        'room': room.serialize()
+    }
     
 
 @friend_routes.route('/remove/<id>', methods=['DELETE'])
@@ -88,7 +110,7 @@ def remove_friend(current_user, id):
     friend = User.query.filter(User.id==id).first()
 
     # Deletes shared rooms from both users
-    rooms = get_common_rooms(friend.rooms, current_user.rooms)
+    rooms = get_common_rooms_no_groups(friend.rooms, current_user.rooms)
     for room in rooms:
         current_user.rooms.remove(room)
         friend.rooms.remove(room)

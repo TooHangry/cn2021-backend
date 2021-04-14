@@ -35,13 +35,36 @@ def send_chat(current_user):
         'messages': [m.serialize() for m in messages]
     }
 
-def create_message(current_user, message_data):
+@chat_routes.route('/loadinitialgroup')
+@token_required
+def load_group_chats(current_user):
+    rooms = current_user.rooms
+    groupIDS = list(filter(lambda x: x.is_group, rooms))
+
+    messages = []
+    for group in groupIDS:
+        chats = Chat.query.filter(
+                and_(
+                    Chat.is_group == True,
+                    Chat.group_id == group.id
+                )
+        ).order_by(Chat.date_created.asc()).all()[-10:]
+        messages.extend(chats)
+
+    return {
+        'messages': [m.serialize() for m in messages]
+    }
+
+    
+
+def create_message(current_user, message_data, room=0):
     message = message_data['message']
     receiver_id = message_data['receiver']
 
     if message:
         chat = Chat(
             is_group=False,
+            group_id=room,
             is_image=False,
             user_id=current_user.id,
             receiver_id=receiver_id,
