@@ -4,6 +4,7 @@ import os
 
 class Chat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, default=0)
     is_group = db.Column(db.Boolean, default=False)
     is_image = db.Column(db.Boolean, default=False)
     image_location = db.Column(db.String(120), nullable=True)
@@ -17,6 +18,7 @@ class Chat(db.Model):
         return {
             'id': self.id,
             'isGroup': self.is_group,
+            'roomID': self.group_id,
             'isImage': self.is_image,
             'imageLocation': self.image_location,
             'userID': self.user_id,

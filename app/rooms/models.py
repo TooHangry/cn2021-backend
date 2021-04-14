@@ -13,8 +13,16 @@ class Room(db.Model):
     name = db.Column(db.String(80))
 
     def serialize(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'isGroup': self.is_group
-        }
+        if not self.is_group:
+            return {
+                'id': self.id,
+                'name': self.name,
+                'isGroup': self.is_group
+            }
+        else:
+            return {
+                'id': self.id,
+                'name': self.name,
+                'isGroup': self.is_group,
+                'users': [s.serialize_friend() for s in self.users]
+            }
