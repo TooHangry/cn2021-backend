@@ -1,6 +1,6 @@
 def get_common_room(user1, user2):
     for room in user1:
-        if room in user2 and not room.is_group:
+        if room in user2:
             return room
 
     return None

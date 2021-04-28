@@ -82,7 +82,7 @@ def on_connect():
 
     if current_user:
         clients.append(current_user.id)
-        emit('connect', {'userInfo': {'user': current_user.serialize(), 'token': token}, 'messages': [m.serialize() for m in messages]})
+        emit("connect", {"userInfo": {'user': current_user.serialize(), "token": token}, 'messages': [m.serialize() for m in messages]})
     else:
         emit("connect", {})
 
